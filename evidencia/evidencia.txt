@@ -1,0 +1,178 @@
+
+==================== PARTE 1: sistemas de archivos montados ====================
+
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+udev            3,9G     0  3,9G   0% /dev
+tmpfs           801M  1,2M  800M   1% /run
+/dev/sda1        38G   15G   22G  41% /
+tmpfs           4,0G   12K  4,0G   1% /dev/shm
+tmpfs           1,0M     0  1,0M   0% /run/credentials/systemd-journald.service
+tmpfs           5,0M  8,0K  5,0M   1% /run/lock
+tmpfs           4,0G   16K  4,0G   1% /tmp
+tmpfs           801M  108K  801M   1% /run/user/1000
+
+$ df -i
+Filesystem      Inodes  IUsed   IFree IUse% Mounted on
+udev           1015413    421 1014992    1% /dev
+tmpfs          1024780    743 1024037    1% /run
+/dev/sda1      2485504 209601 2275903    9% /
+tmpfs          1024780      4 1024776    1% /dev/shm
+tmpfs             1024      1    1023    1% /run/credentials/systemd-journald.service
+tmpfs          1024780      4 1024776    1% /run/lock
+tmpfs          1048576     34 1048542    1% /tmp
+tmpfs           204956    156  204800    1% /run/user/1000
+
+$ lsblk -f
+NAME   FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+sda                                                                           
+├─sda1 ext4   1.0         0fad2fdc-543d-47bc-9b4b-5187cabc16e8     21G    38% /
+├─sda2                                                                        
+└─sda5 swap   1           6ef3be58-0cc0-4338-afda-620cf8f04100                [SWAP]
+sr0                                                                           
+
+==================== PARTE 1 (punto 3): metadatos de archivo y directorio ====================
+
+$ stat archivo.txt
+  File: archivo.txt
+  Size: 31        	Blocks: 8          IO Block: 4096   regular file
+Device: 8,1	Inode: 2249972     Links: 1
+Access: (0664/-rw-rw-r--)  Uid: ( 1000/ ingesis)   Gid: ( 1000/ ingesis)
+Access: 2026-11-18 11:51:10.032069284 -0500
+Modify: 2026-11-18 11:51:10.032069284 -0500
+Change: 2026-11-18 11:51:10.032069284 -0500
+ Birth: 2026-11-18 11:51:10.032069284 -0500
+
+$ stat .
+  File: .
+  Size: 4096      	Blocks: 8          IO Block: 4096   directory
+Device: 8,1	Inode: 2249970     Links: 2
+Access: (0775/drwxrwxr-x)  Uid: ( 1000/ ingesis)   Gid: ( 1000/ ingesis)
+Access: 2026-11-18 11:51:09.992069029 -0500
+Modify: 2026-11-18 11:51:10.032069284 -0500
+Change: 2026-11-18 11:51:10.032069284 -0500
+ Birth: 2026-11-18 11:51:09.992069029 -0500
+
+$ ls -li
+total 4
+2249972 -rw-rw-r-- 1 ingesis ingesis 31 nov 18 11:51 archivo.txt
+
+==================== PARTE 2 (puntos 4 y 5): enlaces ====================
+
+$ ln archivo.txt duro.txt
+
+$ ln -s archivo.txt simbolico.txt
+
+$ ls -li archivo.txt duro.txt simbolico.txt
+2249972 -rw-rw-r-- 2 ingesis ingesis 31 nov 18 11:51 archivo.txt
+2249972 -rw-rw-r-- 2 ingesis ingesis 31 nov 18 11:51 duro.txt
+2249973 lrwxrwxrwx 1 ingesis ingesis 11 nov 18 11:51 simbolico.txt -> archivo.txt
+
+$ stat -c %n  inodo=%i  enlaces=%h  tamano=%s  tipo=%F archivo.txt duro.txt simbolico.txt
+archivo.txt  inodo=2249972  enlaces=2  tamano=31  tipo=regular file
+duro.txt  inodo=2249972  enlaces=2  tamano=31  tipo=regular file
+simbolico.txt  inodo=2249973  enlaces=1  tamano=11  tipo=symbolic link
+
+==================== PARTE 2 (punto 6): borrar el original ====================
+
+$ rm archivo.txt
+
+$ ls -li duro.txt simbolico.txt
+2249972 -rw-rw-r-- 1 ingesis ingesis 31 nov 18 11:51 duro.txt
+2249973 lrwxrwxrwx 1 ingesis ingesis 11 nov 18 11:51 simbolico.txt -> archivo.txt
+
+$ cat duro.txt
+contenido de prueba del taller
+
+$ cat simbolico.txt
+cat: simbolico.txt: No such file or directory
+
+$ stat -c %n  inodo=%i  enlaces=%h duro.txt
+duro.txt  inodo=2249972  enlaces=1
+
+==================== PARTE 2 (punto 7): enlaces entre sistemas de archivos ====================
+
+$ df --output=source,fstype,target . /dev/shm
+Filesystem     Type  Mounted on
+/dev/sda1      ext4  /
+tmpfs          tmpfs /dev/shm
+
+$ ln duro.txt /dev/shm/duro_otro_fs.txt
+ln: failed to create hard link '/dev/shm/duro_otro_fs.txt' => 'duro.txt': Invalid cross-device link
+
+$ ln -s "$PWD/duro.txt" /dev/shm/simbolico_otro_fs.txt && ls -li /dev/shm/simbolico_otro_fs.txt && cat /dev/shm/simbolico_otro_fs.txt
+5 lrwxrwxrwx 1 ingesis ingesis 40 nov 18 11:51 /dev/shm/simbolico_otro_fs.txt -> /home/ingesis/taller_fs/pruebas/duro.txt
+contenido de prueba del taller
+
+==================== PARTE 3 (punto 9): programa sobre archivo, directorio y enlace ====================
+
+$ ../infoarchivo normal.txt
+Archivo:               normal.txt
+Tipo:                  archivo regular
+Tamano:                31 bytes
+Inodo:                 2249974
+Contador de enlaces:   1
+Permisos:              rw-rw-r-- (octal 0664)
+  propietario (ingesis): rw-
+  grupo       (ingesis): rw-
+  otros:                r--
+Ultima modificacion:   2026-11-18 11:51:10
+
+$ ../infoarchivo directorio
+Archivo:               directorio
+Tipo:                  directorio
+Tamano:                4096 bytes
+Inodo:                 2249976
+Contador de enlaces:   2
+Permisos:              rwxrwxr-x (octal 0775)
+  propietario (ingesis): rwx
+  grupo       (ingesis): rwx
+  otros:                r-x
+Ultima modificacion:   2026-11-18 11:51:10
+
+$ ../infoarchivo enlace_normal
+Archivo:               enlace_normal
+Tipo:                  enlace simbolico
+Tamano:                10 bytes
+Inodo:                 2249975
+Contador de enlaces:   1
+Permisos:              rwxrwxrwx (octal 0777)
+  propietario (ingesis): rwx
+  grupo       (ingesis): rwx
+  otros:                rwx
+Ultima modificacion:   2026-11-18 11:51:10
+
+El enlace apunta a:    normal.txt
+(el tamano del enlace son los 10 caracteres de esa ruta)
+Destino:               archivo regular, 31 bytes, inodo 2249974
+
+$ ../infoarchivo duro.txt
+Archivo:               duro.txt
+Tipo:                  archivo regular
+Tamano:                31 bytes
+Inodo:                 2249972
+Contador de enlaces:   1
+Permisos:              rw-rw-r-- (octal 0664)
+  propietario (ingesis): rw-
+  grupo       (ingesis): rw-
+  otros:                r--
+Ultima modificacion:   2026-11-18 11:51:10
+
+$ ../infoarchivo simbolico.txt
+Archivo:               simbolico.txt
+Tipo:                  enlace simbolico
+Tamano:                11 bytes
+Inodo:                 2249973
+Contador de enlaces:   1
+Permisos:              rwxrwxrwx (octal 0777)
+  propietario (ingesis): rwx
+  grupo       (ingesis): rwx
+  otros:                rwx
+Ultima modificacion:   2026-11-18 11:51:10
+
+El enlace apunta a:    archivo.txt
+(el tamano del enlace son los 11 caracteres de esa ruta)
+Destino:               enlace roto (No such file or directory)
+
+$ ../infoarchivo no_existe
+../infoarchivo: no se pudo consultar 'no_existe': No such file or directory
